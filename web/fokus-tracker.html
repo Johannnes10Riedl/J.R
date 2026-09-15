@@ -1,0 +1,682 @@
+<title>Fokus-Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f4f5f3;
+    --surface: #ffffff;
+    --surface-2: #eceeeb;
+    --text: #171c22;
+    --text-muted: #5b6572;
+    --border: #dfe3e0;
+    --tag-schule: #2f6fed;
+    --tag-ski: #e8491f;
+    --tag-finanzen: #1e8a5f;
+    --tag-sonstiges: #6b5fd6;
+    --danger: #c8372a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b;
+      --surface: #1b2027;
+      --surface-2: #232a32;
+      --text: #edefef;
+      --text-muted: #93a0ac;
+      --border: #2a3138;
+      --tag-schule: #4a7be8;
+      --tag-ski: #e85a34;
+      --tag-finanzen: #2a9e6b;
+      --tag-sonstiges: #8a7ae8;
+      --danger: #e0574a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b;
+    --surface: #1b2027;
+    --surface-2: #232a32;
+    --text: #edefef;
+    --text-muted: #93a0ac;
+    --border: #2a3138;
+    --tag-schule: #4a7be8;
+    --tag-ski: #e85a34;
+    --tag-finanzen: #2a9e6b;
+    --tag-sonstiges: #8a7ae8;
+    --danger: #e0574a;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', system-ui, sans-serif;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  header.page {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header.page h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  header.page p {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .board {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.25s ease;
+  }
+  .board[data-live="true"] {
+    border-color: var(--live-color, var(--text));
+  }
+
+  .board-status {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    min-height: 1em;
+  }
+  .board-status .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 6px;
+    transform: translateY(-1px);
+  }
+
+  .digits {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(3.2rem, 16vw, 5rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    background: var(--text-muted);
+    transition: width 0.2s linear, background 0.2s ease;
+  }
+
+  .tag-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .tag-chip {
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 10px 6px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .tag-chip .swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--chip-color);
+  }
+  .tag-chip[aria-pressed="true"] {
+    border-color: var(--chip-color);
+    color: var(--text);
+    background: color-mix(in srgb, var(--chip-color) 12%, var(--surface));
+  }
+  .tag-chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .tag-chip:focus-visible {
+    outline: 2px solid var(--chip-color);
+    outline-offset: 2px;
+  }
+
+  .minutes-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .min-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .min-chip[aria-pressed="true"] {
+    border-color: var(--text);
+    background: var(--surface-2);
+  }
+  .min-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+  .min-chip:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .custom-min {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  .custom-min input {
+    width: 58px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 8px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+  }
+  .custom-min input:disabled { opacity: 0.45; }
+
+  .primary-btn {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    background: var(--text);
+    transition: background 0.15s ease;
+  }
+  .primary-btn[data-mode="stop"] {
+    background: var(--danger);
+  }
+  .primary-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  section.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+  }
+  section.panel h2 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+  }
+
+  .session-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .session-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+  }
+  .session-row .swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--row-color);
+    flex: none;
+  }
+  .session-row .tag-name { flex: none; width: 84px; color: var(--text); font-weight: 600; }
+  .session-row .mins {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+  }
+  .session-row .flag {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--danger);
+  }
+
+  .today-total {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .today-total .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .empty-state {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 76px 1fr 48px;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+  }
+  .bar-row .label { color: var(--text); font-weight: 600; }
+  .bar-track {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    background: var(--bar-color);
+    width: 0%;
+  }
+  .bar-row .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  .reset-row {
+    text-align: center;
+  }
+  .reset-link {
+    font-family: inherit;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 6px;
+  }
+
+  @media (max-width: 420px) {
+    .digits { font-size: clamp(2.6rem, 15vw, 3.6rem); }
+    .session-row .tag-name { width: 68px; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="page">
+    <div>
+      <h1>Fokus-Tracker</h1>
+      <p>Ein Ding nach dem anderen.</p>
+    </div>
+  </header>
+
+  <div class="board" id="board" data-live="false">
+    <div class="board-status" id="boardStatus">Bereit</div>
+    <div class="digits" id="digits">25:00</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div class="tag-row" id="tagRow"></div>
+
+  <div class="minutes-row" id="minutesRow"></div>
+  <div class="custom-min">
+    <label for="customMinutes">eigene Zeit:</label>
+    <input type="number" id="customMinutes" min="1" max="240" step="1" placeholder="Min">
+  </div>
+
+  <button class="primary-btn" id="primaryBtn" data-mode="start">Start</button>
+
+  <section class="panel">
+    <h2>Heute</h2>
+    <ul class="session-list" id="todayList"></ul>
+    <p class="empty-state" id="todayEmpty">Heute noch keine Session. Oben Tag + Zeit waehlen und starten.</p>
+    <div class="today-total" id="todayTotal" hidden>
+      <span>Summe</span>
+      <span class="val" id="todayTotalVal">0 Min</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Letzte 7 Tage</h2>
+    <div class="bars" id="statsBars"></div>
+  </section>
+
+  <div class="reset-row">
+    <button class="reset-link" id="resetBtn">Alle Daten auf diesem Geraet loeschen</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TAGS = [
+    { id: "schule", label: "Schule" },
+    { id: "ski", label: "Ski" },
+    { id: "finanzen", label: "Finanzen" },
+    { id: "sonstiges", label: "Sonstiges" }
+  ];
+  var MIN_PRESETS = [15, 25, 45, 60];
+  var STORE_SESSIONS = "fokus_sessions_v1";
+  var STORE_ACTIVE = "fokus_active_v1";
+
+  var state = {
+    sessions: loadSessions(),
+    active: loadActive(),
+    selectedTag: "schule",
+    selectedMinutes: 25
+  };
+
+  if (state.active) {
+    state.selectedTag = state.active.tag;
+    state.selectedMinutes = state.active.plannedMinutes;
+  }
+
+  function safeGet(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) { /* private mode / quota */ }
+  }
+  function safeRemove(key) {
+    try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+  }
+
+  function loadSessions() {
+    var raw = safeGet(STORE_SESSIONS);
+    if (!raw) return [];
+    try { return JSON.parse(raw); } catch (e) { return []; }
+  }
+  function saveSessions() {
+    safeSet(STORE_SESSIONS, JSON.stringify(state.sessions));
+  }
+  function loadActive() {
+    var raw = safeGet(STORE_ACTIVE);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+  function saveActive() {
+    if (state.active) safeSet(STORE_ACTIVE, JSON.stringify(state.active));
+    else safeRemove(STORE_ACTIVE);
+  }
+
+  function tagLabel(id) {
+    for (var i = 0; i < TAGS.length; i++) if (TAGS[i].id === id) return TAGS[i].label;
+    return id;
+  }
+
+  function fmt(mins) {
+    var m = Math.max(0, Math.round(mins));
+    if (m < 60) return m + " Min";
+    var h = Math.floor(m / 60), r = m % 60;
+    return h + "h " + r + "min";
+  }
+
+  function fmtClock(totalSeconds) {
+    var s = Math.max(0, Math.ceil(totalSeconds));
+    var mm = Math.floor(s / 60);
+    var ss = s % 60;
+    return (mm < 10 ? "0" + mm : "" + mm) + ":" + (ss < 10 ? "0" + ss : "" + ss);
+  }
+
+  // ---- DOM refs ----
+  var boardEl = document.getElementById("board");
+  var boardStatus = document.getElementById("boardStatus");
+  var digitsEl = document.getElementById("digits");
+  var progressFill = document.getElementById("progressFill");
+  var tagRow = document.getElementById("tagRow");
+  var minutesRow = document.getElementById("minutesRow");
+  var customMinutes = document.getElementById("customMinutes");
+  var primaryBtn = document.getElementById("primaryBtn");
+  var todayList = document.getElementById("todayList");
+  var todayEmpty = document.getElementById("todayEmpty");
+  var todayTotal = document.getElementById("todayTotal");
+  var todayTotalVal = document.getElementById("todayTotalVal");
+  var statsBars = document.getElementById("statsBars");
+  var resetBtn = document.getElementById("resetBtn");
+
+  // ---- build static chips ----
+  TAGS.forEach(function (tag) {
+    var btn = document.createElement("button");
+    btn.className = "tag-chip";
+    btn.type = "button";
+    btn.style.setProperty("--chip-color", "var(--tag-" + tag.id + ")");
+    btn.dataset.tag = tag.id;
+    btn.innerHTML = '<span class="swatch"></span><span>' + tag.label + '</span>';
+    btn.addEventListener("click", function () {
+      if (state.active) return;
+      state.selectedTag = tag.id;
+      render();
+    });
+    tagRow.appendChild(btn);
+  });
+
+  MIN_PRESETS.forEach(function (m) {
+    var btn = document.createElement("button");
+    btn.className = "min-chip";
+    btn.type = "button";
+    btn.textContent = m;
+    btn.dataset.min = m;
+    btn.addEventListener("click", function () {
+      if (state.active) return;
+      state.selectedMinutes = m;
+      customMinutes.value = "";
+      render();
+    });
+    minutesRow.appendChild(btn);
+  });
+
+  customMinutes.addEventListener("input", function () {
+    var v = parseInt(customMinutes.value, 10);
+    if (v > 0) {
+      state.selectedMinutes = v;
+      render();
+    }
+  });
+
+  primaryBtn.addEventListener("click", function () {
+    if (state.active) {
+      finishSession(false);
+    } else {
+      var minutes = state.selectedMinutes;
+      if (!minutes || minutes <= 0) return;
+      state.active = {
+        tag: state.selectedTag,
+        plannedMinutes: minutes,
+        startedAt: Date.now()
+      };
+      saveActive();
+      render();
+    }
+  });
+
+  resetBtn.addEventListener("click", function () {
+    if (state.active) return;
+    var ok = window.confirm("Alle Fokus-Daten auf diesem Geraet loeschen? Das kann nicht rueckgaengig gemacht werden.");
+    if (!ok) return;
+    state.sessions = [];
+    saveSessions();
+    render();
+  });
+
+  function finishSession(completedByTimer) {
+    var a = state.active;
+    if (!a) return;
+    var elapsedMin = (Date.now() - a.startedAt) / 60000;
+    var completed = completedByTimer || elapsedMin >= a.plannedMinutes - 0.02;
+    var actual = completed ? a.plannedMinutes : elapsedMin;
+    state.sessions.push({
+      tag: a.tag,
+      plannedMinutes: a.plannedMinutes,
+      actualMinutes: Math.max(0, actual),
+      completed: completed,
+      endedAt: new Date().toISOString()
+    });
+    state.active = null;
+    saveSessions();
+    saveActive();
+    render();
+  }
+
+  function isSameDay(iso, ref) {
+    var d = new Date(iso);
+    return d.getFullYear() === ref.getFullYear() &&
+      d.getMonth() === ref.getMonth() &&
+      d.getDate() === ref.getDate();
+  }
+
+  function render() {
+    var now = new Date();
+
+    // tag chips
+    Array.prototype.forEach.call(tagRow.children, function (btn) {
+      var active = btn.dataset.tag === state.selectedTag;
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      btn.disabled = !!state.active;
+    });
+
+    // minute chips
+    Array.prototype.forEach.call(minutesRow.children, function (btn) {
+      var val = parseInt(btn.dataset.min, 10);
+      btn.setAttribute("aria-pressed", val === state.selectedMinutes ? "true" : "false");
+      btn.disabled = !!state.active;
+    });
+    customMinutes.disabled = !!state.active;
+
+    // board
+    var tagVar = "var(--tag-" + state.selectedTag + ")";
+    if (state.active) {
+      boardEl.dataset.live = "true";
+      boardEl.style.setProperty("--live-color", "var(--tag-" + state.active.tag + ")");
+      var remainSec = (state.active.startedAt + state.active.plannedMinutes * 60000 - Date.now()) / 1000;
+      if (remainSec <= 0) {
+        finishSession(true);
+        return;
+      }
+      digitsEl.textContent = fmtClock(remainSec);
+      boardStatus.innerHTML = '<span class="dot" style="color:' + tagVar + '"></span>Laeuft — ' + tagLabel(state.active.tag);
+      var frac = 1 - (remainSec / (state.active.plannedMinutes * 60));
+      progressFill.style.width = Math.min(100, Math.max(0, frac * 100)) + "%";
+      progressFill.style.background = tagVar;
+      primaryBtn.textContent = "Stoppen";
+      primaryBtn.dataset.mode = "stop";
+    } else {
+      boardEl.dataset.live = "false";
+      digitsEl.textContent = fmtClock(state.selectedMinutes * 60);
+      boardStatus.textContent = "Bereit — " + tagLabel(state.selectedTag);
+      progressFill.style.width = "0%";
+      progressFill.style.background = "var(--text-muted)";
+      primaryBtn.textContent = "Start";
+      primaryBtn.dataset.mode = "start";
+    }
+
+    // today list
+    var todays = state.sessions.filter(function (s) { return isSameDay(s.endedAt, now); });
+    todayList.innerHTML = "";
+    if (todays.length === 0) {
+      todayEmpty.hidden = false;
+      todayTotal.hidden = true;
+    } else {
+      todayEmpty.hidden = true;
+      todayTotal.hidden = false;
+      var total = 0;
+      todays.slice().reverse().forEach(function (s) {
+        total += s.actualMinutes;
+        var li = document.createElement("li");
+        li.className = "session-row";
+        li.style.setProperty("--row-color", "var(--tag-" + s.tag + ")");
+        var flag = s.completed ? "" : '<span class="flag">Abgebrochen</span>';
+        li.innerHTML = '<span class="swatch"></span>' +
+          '<span class="tag-name">' + tagLabel(s.tag) + '</span>' +
+          '<span class="mins">' + fmt(s.actualMinutes) + '</span>' + flag;
+        todayList.appendChild(li);
+      });
+      todayTotalVal.textContent = fmt(total);
+    }
+
+    // stats bars, last 7 days
+    var cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    var perTag = {};
+    TAGS.forEach(function (t) { perTag[t.id] = 0; });
+    state.sessions.forEach(function (s) {
+      var t = new Date(s.endedAt).getTime();
+      if (t >= cutoff) perTag[s.tag] = (perTag[s.tag] || 0) + s.actualMinutes;
+    });
+    var max = Math.max(1, Math.max.apply(null, TAGS.map(function (t) { return perTag[t.id]; })));
+    statsBars.innerHTML = "";
+    TAGS.forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "bar-row";
+      var pct = (perTag[t.id] / max) * 100;
+      row.innerHTML = '<span class="label">' + t.label + '</span>' +
+        '<span class="bar-track"><span class="bar-fill" style="--bar-color: var(--tag-' + t.id + '); width:' + pct + '%"></span></span>' +
+        '<span class="val">' + fmt(perTag[t.id]) + '</span>';
+      statsBars.appendChild(row);
+    });
+  }
+
+  setInterval(function () {
+    if (state.active) render();
+  }, 250);
+
+  render();
+})();
+</script>
