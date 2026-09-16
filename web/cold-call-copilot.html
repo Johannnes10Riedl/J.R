@@ -1,0 +1,603 @@
+<title>Cold-Call-Copilot</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cold-Call">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#12161b">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f4f5f3;
+    --surface: #ffffff;
+    --surface-2: #eceeeb;
+    --text: #171c22;
+    --text-muted: #5b6572;
+    --border: #dfe3e0;
+    --accent: #1e8a5f;
+    --live: #c8372a;
+    --danger: #c8372a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b;
+      --surface: #1b2027;
+      --surface-2: #232a32;
+      --text: #edefef;
+      --text-muted: #93a0ac;
+      --border: #2a3138;
+      --accent: #2a9e6b;
+      --live: #e0574a;
+      --danger: #e0574a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b;
+    --surface: #1b2027;
+    --surface-2: #232a32;
+    --text: #edefef;
+    --text-muted: #93a0ac;
+    --border: #2a3138;
+    --accent: #2a9e6b;
+    --live: #e0574a;
+    --danger: #e0574a;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', system-ui, sans-serif;
+    margin: 0;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  header.page {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header.page h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  header.page p {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  section.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+  }
+  section.panel h2 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+  }
+
+  details.panel > summary {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+    list-style: none;
+  }
+  details.panel > summary::-webkit-details-marker { display: none; }
+  details.panel[open] > summary { margin-bottom: 12px; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+  .field input {
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+  }
+  .field input:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+
+  .mic-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0 6px;
+  }
+  .mic-btn {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .mic-btn:active { transform: scale(0.96); }
+  .mic-btn[data-live="true"] {
+    background: var(--live);
+    color: #fff;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 45%, transparent); }
+    50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--live) 0%, transparent); }
+  }
+  .mic-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+  .mic-status {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .transcript {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    max-height: 88px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  .transcript .final { color: var(--text); }
+  .transcript .interim { opacity: 0.6; }
+
+  .suggestion-card {
+    border-color: var(--accent);
+  }
+  .suggestion-chip {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    border-radius: 8px;
+    padding: 4px 9px;
+    margin-bottom: 10px;
+  }
+  .suggestion-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.45;
+    margin: 0 0 12px;
+  }
+  .copy-btn {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .copy-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .trigger-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .trigger-btn {
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: left;
+  }
+  .trigger-btn:hover { color: var(--text); border-color: var(--text); }
+  .trigger-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .script-block { margin-bottom: 14px; }
+  .script-block:last-child { margin-bottom: 0; }
+  .script-block h3 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+  }
+  .script-block p, .script-block ul {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin: 0;
+    padding-left: 0;
+  }
+  .script-block ul { padding-left: 18px; margin-top: 4px; }
+  .script-block li { margin-bottom: 4px; }
+
+  .history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .history-row {
+    font-size: 0.8rem;
+    display: flex;
+    gap: 8px;
+  }
+  .history-row .t {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    flex: none;
+  }
+  .empty-state { font-size: 0.85rem; color: var(--text-muted); }
+
+  .hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .unsupported {
+    font-size: 0.85rem;
+    color: var(--danger);
+    text-align: center;
+    padding: 12px 0;
+  }
+</style>
+
+<div class="wrap">
+  <header class="page">
+    <div>
+      <h1>Cold-Call-Copilot</h1>
+      <p>Live-Souffleur fuers Telefonieren</p>
+    </div>
+  </header>
+
+  <details class="panel" id="setup-panel">
+    <summary>Angaben</summary>
+    <div class="field">
+      <label for="f-name">Dein Name</label>
+      <input id="f-name" type="text" placeholder="z.B. Johannes">
+    </div>
+    <div class="field">
+      <label for="f-firma">Deine Firma</label>
+      <input id="f-firma" type="text" placeholder="z.B. Riedl Webdesign">
+    </div>
+    <div class="field">
+      <label for="f-angebot">Angebot (kurz)</label>
+      <input id="f-angebot" type="text" placeholder="eine individuelle Website fuer dein Business">
+    </div>
+    <div class="field">
+      <label for="f-preis">Preis / Einstieg (optional)</label>
+      <input id="f-preis" type="text" placeholder="z.B. ab 39 EUR/Monat, ohne Fixkosten">
+    </div>
+    <div class="field">
+      <label for="f-ziel">Ziel des Anrufs</label>
+      <input id="f-ziel" type="text" placeholder="ein kurzes Kennenlerngespraech">
+    </div>
+  </details>
+
+  <section class="panel">
+    <div class="mic-row">
+      <button class="mic-btn" id="mic-btn" data-live="false" aria-label="Mikrofon starten">&#127908;</button>
+      <div class="mic-status" id="mic-status">Bereit</div>
+    </div>
+    <div class="transcript" id="transcript"><span class="interim">Transkript erscheint hier, sobald du sprichst oder zuhoerst …</span></div>
+  </section>
+
+  <section class="panel suggestion-card" id="suggestion-card">
+    <div class="suggestion-chip" id="suggestion-chip">Start</div>
+    <p class="suggestion-text" id="suggestion-text">Noch kein Trigger erkannt. Starte das Mikrofon oder waehle unten manuell einen Einwand.</p>
+    <button class="copy-btn" id="copy-btn">Kopieren</button>
+  </section>
+
+  <section class="panel">
+    <h2>Manuell ausloesen</h2>
+    <div class="trigger-grid" id="trigger-grid"></div>
+  </section>
+
+  <details class="panel">
+    <summary>Grundscript (Referenz)</summary>
+    <div id="script-ref"></div>
+  </details>
+
+  <section class="panel">
+    <h2>Verlauf</h2>
+    <ul class="history-list" id="history-list">
+      <li class="empty-state">Noch keine Einwaende erkannt.</li>
+    </ul>
+  </section>
+
+  <p class="hint">
+    Laeuft komplett im Browser. Fuer die Spracherkennung nutzt Chrome/Edge/Safari einen Cloud-Dienst
+    des Browser-Anbieters (Audio wird zur Transkription hochgeladen) &mdash; sag das bei Bedarf offen an,
+    wenn dein Gegenueber danach fragt. Firefox unterstuetzt keine Live-Spracherkennung; nutze dann die
+    manuellen Buttons. Wenn dein Mikrofon die Gegenseite nicht mithoert: Anruf auf Lautsprecher stellen.
+  </p>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'coldCallCopilot.setup';
+  var defaults = {
+    name: '',
+    firma: '',
+    angebot: 'eine individuelle Website fuer dein Business',
+    preis: '',
+    ziel: 'ein kurzes Kennenlerngespraech'
+  };
+  var setup = Object.assign({}, defaults, loadSetup());
+
+  function loadSetup() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveSetup() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(setup)); } catch (e) {}
+  }
+
+  var fields = { name: 'f-name', firma: 'f-firma', angebot: 'f-angebot', preis: 'f-preis', ziel: 'f-ziel' };
+  Object.keys(fields).forEach(function (key) {
+    var el = document.getElementById(fields[key]);
+    el.value = setup[key] || '';
+    el.addEventListener('input', function () {
+      setup[key] = el.value;
+      saveSetup();
+      renderScriptRef();
+    });
+  });
+  if (!setup.name && !setup.firma) document.getElementById('setup-panel').open = true;
+
+  function fill(tpl) {
+    var v = {
+      name: setup.name || '[dein Name]',
+      firma: setup.firma || '[deine Firma]',
+      angebot: setup.angebot || defaults.angebot,
+      preis: setup.preis ? (' ' + setup.preis + '.') : '',
+      ziel: setup.ziel || defaults.ziel
+    };
+    return tpl.replace(/\{\{(\w+)\}\}/g, function (_, k) { return v[k] != null ? v[k] : ''; });
+  }
+
+  var categories = [
+    {
+      id: 'kein-interesse',
+      label: 'Kein Interesse',
+      triggers: ['kein interesse', 'nicht interessiert', 'brauch ich nicht', 'will ich nicht', 'nein danke'],
+      response: 'Verstehe, das sagen viele zuerst. Darf ich kurz fragen: Wie finden neue Kunden Sie aktuell, wenn sie Sie online suchen? {{firma}} baut genau dafuer {{angebot}}.'
+    },
+    {
+      id: 'keine-zeit',
+      label: 'Keine Zeit',
+      triggers: ['keine zeit', 'gerade beschaeftigt', 'gerade schlecht', 'passt gerade nicht', 'mitten in einem termin'],
+      response: 'Passt total, ich will keine Zeit stehlen. Ganz kurz: Ich baue {{angebot}} fuer Betriebe ohne eigene Website. Wann passt {{ziel}} diese Woche besser &ndash; morgen frueh oder eher nachmittags?'
+    },
+    {
+      id: 'haben-schon',
+      label: 'Haben schon Website/Insta',
+      triggers: ['haben wir schon', 'haben bereits', 'instagram reicht', 'facebook seite', 'haben eine seite', 'haben eine webseite'],
+      response: 'Super, dass Sie da schon aktiv sind. Wie viele Anfragen bringt das aktuell pro Monat? Wir bauen keine Konkurrenz dazu, sondern eine zentrale Seite, die Google findet und Anfragen buendelt.'
+    },
+    {
+      id: 'zu-teuer',
+      label: 'Zu teuer / Preisfrage',
+      triggers: ['zu teuer', 'was kostet das', 'wie viel kostet', 'kein budget', 'kein geld dafuer'],
+      response: 'Verstehe, Budget ist immer ein Thema.{{preis}} Bevor wir ueber den Preis reden: darf ich kurz zeigen, was Sie konkret bekommen? Dann entscheiden Sie, ob es das wert ist.'
+    },
+    {
+      id: 'schon-jemand',
+      label: 'Macht schon jemand (Bekannter etc.)',
+      triggers: ['macht schon jemand', 'neffe macht das', 'bekannter macht das', 'haben schon eine agentur', 'webdesigner haben wir'],
+      response: 'Gut, dass da schon wer dran ist. Ist die Seite schon online und bringt sie messbar Anfragen? Oft hilft ein zweiter, unabhaengiger Blick von aussen &ndash; unverbindlich.'
+    },
+    {
+      id: 'skeptisch',
+      label: 'Skeptisch / Spam-Verdacht',
+      triggers: ['ist das serioes', 'wer sind sie', 'woher haben sie meine nummer', 'ist das werbung', 'ist das spam'],
+      response: 'Gute Frage, stell ich klar: Ich bin {{name}} von {{firma}}, wir bauen {{angebot}} fuer lokale Betriebe. Kein Verkaufsdruck &ndash; wenn es nichts fuer Sie ist, sagen Sie es einfach, dann leg ich auf.'
+    },
+    {
+      id: 'nicht-zustaendig',
+      label: 'Entscheider nicht da',
+      triggers: ['bin nicht zustaendig', 'chef ist nicht da', 'inhaber ist nicht da', 'geschaeftsfuehrer nicht da', 'muss ich fragen'],
+      response: 'Kein Problem &ndash; wer waere da der richtige Ansprechpartner, und wann erreiche ich die Person am besten?'
+    },
+    {
+      id: 'infos-mail',
+      label: 'Infos per Mail',
+      triggers: ['schicken sie mir', 'per email', 'per mail', 'infos zuschicken', 'schicken sie mal was'],
+      response: 'Mache ich gerne zusaetzlich. Damit ich Ihnen etwas Passendes statt einer Standardmail schicke, brauche ich nur 1 Minute &ndash; welches Problem soll die Website fuer Sie loesen?'
+    },
+    {
+      id: 'interesse',
+      label: 'Positives Signal',
+      triggers: ['klingt interessant', 'erzaehlen sie mehr', 'ja gerne', 'interessiert mich', 'koennte passen'],
+      response: 'Freut mich! Dann schlage ich {{ziel}} vor, wo wir das konkret an Ihrem Fall durchgehen. Passt eher morgen oder uebermorgen besser?'
+    }
+  ];
+
+  var grid = document.getElementById('trigger-grid');
+  categories.forEach(function (cat) {
+    var btn = document.createElement('button');
+    btn.className = 'trigger-btn';
+    btn.type = 'button';
+    btn.textContent = cat.label;
+    btn.addEventListener('click', function () { showSuggestion(cat, '(manuell)'); });
+    grid.appendChild(btn);
+  });
+
+  var history = [];
+  function showSuggestion(cat, source) {
+    document.getElementById('suggestion-chip').textContent = cat.label;
+    document.getElementById('suggestion-text').innerHTML = fill(cat.response);
+    var time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    history.unshift({ time: time, label: cat.label, source: source || '' });
+    renderHistory();
+  }
+
+  function renderHistory() {
+    var list = document.getElementById('history-list');
+    if (!history.length) {
+      list.innerHTML = '<li class="empty-state">Noch keine Einwaende erkannt.</li>';
+      return;
+    }
+    list.innerHTML = '';
+    history.slice(0, 12).forEach(function (h) {
+      var li = document.createElement('li');
+      li.className = 'history-row';
+      li.innerHTML = '<span class="t">' + h.time + '</span><span>' + h.label + ' ' + h.source + '</span>';
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById('copy-btn').addEventListener('click', function () {
+    var text = document.getElementById('suggestion-text').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function () {});
+  });
+
+  function matchObjection(text) {
+    var lower = text.toLowerCase();
+    for (var i = 0; i < categories.length; i++) {
+      var cat = categories[i];
+      for (var j = 0; j < cat.triggers.length; j++) {
+        if (lower.indexOf(cat.triggers[j]) !== -1) {
+          showSuggestion(cat, '(erkannt)');
+          return;
+        }
+      }
+    }
+  }
+
+  function renderScriptRef() {
+    var el = document.getElementById('script-ref');
+    el.innerHTML =
+      '<div class="script-block"><h3>Opener</h3><p>' + fill(
+        'Hallo, hier ist {{name}} von {{firma}}. Ich melde mich kurz, weil mir aufgefallen ist, dass Sie ' +
+        'online noch keine eigene Website haben &ndash; wer Sie ueber Google sucht, findet Sie also schwer. ' +
+        'Passt es kurz fuer 30 Sekunden?'
+      ) + '</p></div>' +
+      '<div class="script-block"><h3>Bedarfsermittlung</h3><ul>' +
+        '<li>Wie finden neue Kunden Sie aktuell &ndash; ueber Empfehlung, Social Media, Laufkundschaft?</li>' +
+        '<li>Was waere fuer Sie der groesste Vorteil, wenn Google Sie sofort findet?</li>' +
+        '<li>Haben Sie schonmal versucht, selbst eine Seite zu machen?</li>' +
+      '</ul></div>' +
+      '<div class="script-block"><h3>Kurzpitch</h3><p>' + fill(
+        'Wir erstellen {{angebot}} &ndash; fertig, mobil, bei Google auffindbar, ohne dass Sie sich selbst ' +
+        'um Technik kuemmern muessen.{{preis}}'
+      ) + '</p></div>' +
+      '<div class="script-block"><h3>Closing</h3><p>' + fill(
+        'Ich schlage vor, wir vereinbaren {{ziel}}, wo ich Ihnen konkret an Ihrem Betrieb zeige, wie das ' +
+        'aussehen wuerde. Passt eher diese oder naechste Woche?'
+      ) + '</p></div>';
+  }
+  renderScriptRef();
+
+  var micBtn = document.getElementById('mic-btn');
+  var micStatus = document.getElementById('mic-status');
+  var transcriptEl = document.getElementById('transcript');
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    micBtn.disabled = true;
+    micBtn.style.opacity = '0.4';
+    micStatus.textContent = 'Nicht unterstuetzt';
+    transcriptEl.innerHTML = '<span class="unsupported">Live-Spracherkennung braucht Chrome, Edge oder Safari. Nutze die manuellen Buttons unten.</span>';
+  } else {
+    var recognition = new SpeechRecognition();
+    recognition.lang = 'de-DE';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    var listening = false;
+    var finalText = '';
+
+    recognition.onresult = function (event) {
+      var interim = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        var chunk = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += chunk + ' ';
+          matchObjection(chunk);
+        } else {
+          interim += chunk;
+        }
+      }
+      var tail = finalText.slice(-400);
+      transcriptEl.innerHTML = '<span class="final">' + tail + '</span><span class="interim">' + interim + '</span>';
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    };
+
+    recognition.onerror = function (event) {
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        micStatus.textContent = 'Mikrofon-Zugriff verweigert';
+        listening = false;
+        micBtn.setAttribute('data-live', 'false');
+      }
+    };
+
+    recognition.onend = function () {
+      if (listening) {
+        try { recognition.start(); } catch (e) {}
+      } else {
+        micStatus.textContent = 'Bereit';
+      }
+    };
+
+    micBtn.addEventListener('click', function () {
+      listening = !listening;
+      micBtn.setAttribute('data-live', String(listening));
+      if (listening) {
+        micStatus.textContent = 'Hoert zu …';
+        try { recognition.start(); } catch (e) {}
+      } else {
+        micStatus.textContent = 'Bereit';
+        try { recognition.stop(); } catch (e) {}
+      }
+    });
+  }
+})();
+</script>
